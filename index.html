@@ -712,8 +712,10 @@
         .append('svg')
         .attr('viewBox', `0 0 ${width} ${height}`);
 
+      const popularityExtent = d3.extent(anime, d => d.popularity);
+
       const x = d3.scaleLinear()
-        .domain(d3.extent(anime, d => d.popularity).reverse())
+        .domain([Math.max(1, popularityExtent[1]), popularityExtent[0]])
         .nice()
         .range([margin.left, width - margin.right]);
 
@@ -739,7 +741,7 @@
       svg.append('g')
         .attr('class', 'axis')
         .attr('transform', `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x).ticks(7).tickFormat(d => `#${formatComma(d)}`));
+        .call(d3.axisBottom(x).ticks(7).tickFormat(d => d === 0 ? '' : `#${formatComma(d)}`));
 
       svg.append('g')
         .attr('class', 'axis')
