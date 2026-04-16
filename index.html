@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Current Top Anime Discovery Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #09090d;
+      --bg-soft: #101017;
+      --panel: #14141d;
+      --panel-2: #181822;
+      --header-purple: #6f49ff;
+      --header-purple-2: #8d6bff;
+      --accent: #9b7dff;
+      --accent-2: #b7a3ff;
+      --text: #ffffff;
+      --muted: #b9b6c9;
+      --line: rgba(255,255,255,0.1);
+      --shadow: 0 20px 50px rgba(0,0,0,0.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Manrope', system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(111, 73, 255, 0.14), transparent 22%),
+        linear-gradient(180deg, #050508 0%, #09090d 100%);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #09090d 0%, #0b0b10 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      background: linear-gradient(135deg, var(--header-purple) 0%, var(--header-purple-2) 100%);
+      padding: 32px 40px 34px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 32px;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #fff;
+    }
+
+    .title-wrap p {
+      margin: 10px 0 0;
+      color: rgba(255,255,255,0.86);
+      font-size: 0.96rem;
+      max-width: 760px;
+      line-height: 1.65;
+    }
+
+    .top-note {
+      max-width: 390px;
+      text-align: right;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 32px 22px;
+      align-items: start;
+    }
+
+    .ranking-column {
+      display: block;
+      align-self: start;
+    }
+
+    .section-kicker {
+      margin: 0 0 12px;
+      color: var(--accent-2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .ranking-panel {
+      overflow: hidden;
+      display: block;
+      height: auto;
+      padding-bottom: 0;
+      align-self: start;
+    }
+
+    .featured-card {
+      display: grid;
+      grid-template-columns: 104px 1fr;
+      gap: 20px;
+      padding: 22px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(155,125,255,0.12), rgba(155,125,255,0.04));
+    }
+
+    .poster, .thumb {
+      display: block;
+      object-fit: cover;
+      background: #0d0d12;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .poster {
+      width: 104px;
+      height: 148px;
+      border-radius: 12px;
+    }
+
+    .thumb {
+      width: 48px;
+      height: 64px;
+      border-radius: 10px;
+    }
+
+    .featured-rank {
+      display: inline-flex;
+      margin-bottom: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(155,125,255,0.18);
+      color: var(--accent-2);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .featured-title {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .meta-list {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .meta-list strong { color: #fff; }
+
+    .anime-list .anime-row:nth-child(odd) {
+      background: rgba(255,255,255,0.015);
+    }
+
+    .anime-row {
+      display: grid;
+      grid-template-columns: 28px 48px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      transition: background 140ms ease;
+    }
+
+    .anime-row:hover {
+      background: rgba(155,125,255,0.08) !important;
+    }
+
+    .row-rank {
+      color: var(--accent-2);
+      font-weight: 800;
+      font-size: 0.88rem;
+    }
+
+    .row-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      line-height: 1.25;
+      color: #fff;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .row-sub {
+      color: var(--muted);
+      font-size: 0.77rem;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      line-height: 1.4;
+    }
+
+    .row-score {
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .row-score strong {
+      display: block;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .charts {
+      display: grid;
+      gap: 24px;
+      min-width: 0;
+    }
+
+    .chart-panel {
+      padding: 22px 22px 16px;
+      overflow: hidden;
+    }
+
+    .genre-panel {
+    }
+
+    .chart-scroll {
+      height: 380px;
+      overflow-y: hidden;
+      overflow-x: hidden;
+      padding-right: 0;
+    }
+
+    .chart-scroll::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .chart-scroll::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+    }
+
+    .chart-scroll::-webkit-scrollbar-thumb {
+      background: rgba(155,125,255,0.55);
+      border-radius: 999px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .chart-title h2 {
+      margin: 0;
+      font-size: 1.32rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .chart-title p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      max-width: 720px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    select {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: #1b1b25;
+      color: #fff;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    option {
+      background: #12121a;
+      color: #fff;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .axis text {
+      font-size: 11px;
+      fill: rgba(255,255,255,0.9);
+      font-family: 'Manrope', system-ui, sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+      stroke: rgba(255,255,255,0.14);
+    }
+
+    .grid line {
+      stroke: rgba(255,255,255,0.07);
+    }
+
+    .grid path {
+      display: none;
+    }
+
+    .chart-footnote {
+      opacity: 0.85;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .footer-source-wrap {
+      padding: 8px 32px 34px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .footer-source {
+      white-space: nowrap;
+      max-width: 760px;
+      margin: 0 auto;
+      padding-top: 12px;
+      
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.55;
+      text-align: center;
+      opacity: 0.9;
+    }
+
+    .footer-source strong {
+      color: #fff;
+    }
+
+    .tooltip {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      background: rgba(14,14,20,0.96);
+      border: 1px solid rgba(155,125,255,0.26);
+      border-radius: 14px;
+      padding: 12px 14px;
+      max-width: 290px;
+      color: #fff;
+      box-shadow: 0 24px 50px rgba(0,0,0,0.34);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .tooltip strong {
+      font-size: 0.92rem;
+      font-weight: 800;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.96);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    .eyebrow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.16);
+    }
+
+    .product-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      padding: 24px 32px 0;
+    }
+
+    .product-card {
+      padding: 18px 20px;
+      background: linear-gradient(180deg, rgba(155,125,255,0.1), rgba(255,255,255,0.02));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .product-card .label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--accent-2);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .product-card h2 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .product-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+
+    @media (max-width: 1040px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .topbar {
+        flex-direction: column;
+      }
+      .top-note {
+        text-align: left;
+        max-width: none;
+      }
+      .product-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="title-wrap">
+        <div class="eyebrow"><span class="eyebrow-dot"></span>Anime discovery tool</div>
+        <h1>Discover what anime to watch in real time</h1>
+        <p>A live D3 dashboard built from Jikan’s top airing anime data, focused on ranking, score, popularity, favorites, and genre trends to help users quickly compare titles and decide what to watch.</p>
+      </div>
+      <div class="top-note">
+        Designed to help users quickly compare how anime perform across score, popularity, and genre trends without switching platforms.
+      </div>
+    </header>
+
+    <section class="product-strip" aria-label="How this tool helps users">
+      <div class="product-card panel">
+        <span class="label">Browse</span>
+        <h2>Scan the strongest current picks</h2>
+        <p>Scan currently airing anime to quickly see what is performing best based on ranking and audience size.</p>
+      </div>
+      <div class="product-card panel">
+        <span class="label">Compare</span>
+        <h2>See score against popularity</h2>
+        <p>Compare score and popularity to see which shows are highly rated, widely followed, or both.</p>
+      </div>
+      <div class="product-card panel">
+        <span class="label">Decide</span>
+        <h2>Use genre trends as extra context</h2>
+        <p>Use genre trends to understand what types of shows are most common in the current lineup.</p>
+      </div>
+    </section>
+
+    <main class="layout">
+      <section class="ranking-column">
+        <p class="section-kicker">Top ranked anime right now</p>
+        <div class="panel ranking-panel">
+          <div id="featured"></div>
+          <div id="anime-list" class="anime-list"></div>
+        </div>
+      </section>
+
+      <section class="charts">
+        <div class="panel chart-panel">
+          <div class="chart-header">
+            <div class="chart-title">
+              <h2>Compare score and popularity</h2>
+              <p>This chart compares score and popularity rank. Each circle represents one anime, with size showing overall audience reach.</p>
+            </div>
+          </div>
+          <div id="scatter-wrap"></div>
+          <div class="chart-footnote">Higher position indicates a stronger score. Points farther to the right indicate stronger popularity (lower rank). Larger circles represent a larger audience.</div>
+        </div>
+
+        <div class="panel chart-panel genre-panel">
+          <div class="chart-header">
+            <div class="chart-title">
+              <h2>Current genre trends</h2>
+              <p>This chart shows how often each genre appears across the current top airing anime, highlighting which types of shows are most common.</p>
+            </div>
+            <div class="controls">
+              <label>
+                Show top
+                <select id="genreCount">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="chart-scroll">
+            <div id="genre-wrap"></div>
+          </div>
+          <div class="chart-footnote">The number at the end of each bar shows how many anime include that genre in the current list.</div>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer-source-wrap">
+      <div class="footer-source">
+        <strong>Source:</strong> Data from Jikan API (top airing anime), filtered to currently airing TV anime. Fallback data is used if the live request is unavailable.
+      </div>
+    </div>
+  </div>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <script>
+    const embeddedResponse = {
+      "pagination": {"last_visible_page": 1, "has_next_page": false},
+      "data": [
+        {"title":"Sousou no Frieren 2nd Season","score":9.14,"scored_by":70386,"rank":3,"popularity":612,"members":430932,"favorites":5797,"genres":[{"name":"Adventure"},{"name":"Drama"},{"name":"Fantasy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1921/154528l.jpg"}}},
+        {"title":"One Piece Fan Letter","score":9.11,"scored_by":83827,"rank":4,"popularity":700,"members":373616,"favorites":11263,"genres":[{"name":"Action"},{"name":"Adventure"},{"name":"Fantasy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1228/151495l.jpg"}}},
+        {"title":"Kusuriya no Hitorigoto 2nd Season","score":8.88,"scored_by":105518,"rank":15,"popularity":817,"members":320711,"favorites":4901,"genres":[{"name":"Drama"},{"name":"Mystery"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1168/153724l.jpg"}}},
+        {"title":"Kingdom 6th Season","score":8.84,"scored_by":9246,"rank":17,"popularity":3043,"members":52695,"favorites":584,"genres":[{"name":"Action"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1658/154751l.jpg"}}},
+        {"title":"Dr. Stone: Science Future Part 2","score":8.61,"scored_by":31115,"rank":59,"popularity":1468,"members":143824,"favorites":995,"genres":[{"name":"Adventure"},{"name":"Comedy"},{"name":"Sci-Fi"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1946/153779l.jpg"}}},
+        {"title":"Ao no Hako 2nd Season","score":8.56,"scored_by":23910,"rank":72,"popularity":1476,"members":142669,"favorites":1668,"genres":[{"name":"Romance"},{"name":"Sports"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1634/154749l.jpg"}}},
+        {"title":"Dandadan 2nd Season","score":8.55,"scored_by":63855,"rank":74,"popularity":371,"members":651091,"favorites":8716,"genres":[{"name":"Action"},{"name":"Comedy"},{"name":"Supernatural"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1740/151956l.jpg"}}},
+        {"title":"Gachiakuta","score":8.43,"scored_by":71860,"rank":104,"popularity":269,"members":831645,"favorites":6131,"genres":[{"name":"Action"},{"name":"Fantasy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1724/153857l.jpg"}}},
+        {"title":"Enen no Shouboutai: San no Shou Part 2","score":8.40,"scored_by":16783,"rank":113,"popularity":1118,"members":217642,"favorites":1254,"genres":[{"name":"Action"},{"name":"Fantasy"},{"name":"Sci-Fi"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1385/153567l.jpg"}}},
+        {"title":"Watashi no Shiawase na Kekkon 2nd Season","score":8.35,"scored_by":38542,"rank":138,"popularity":1048,"members":240248,"favorites":2241,"genres":[{"name":"Drama"},{"name":"Fantasy"},{"name":"Romance"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1081/151837l.jpg"}}},
+        {"title":"Sakamoto Days Part 2","score":8.30,"scored_by":39142,"rank":166,"popularity":545,"members":477525,"favorites":3494,"genres":[{"name":"Action"},{"name":"Comedy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1520/151446l.jpg"}}},
+        {"title":"Jibaku Shounen Hanako-kun 2 Part 2","score":8.29,"scored_by":23842,"rank":174,"popularity":1019,"members":247191,"favorites":1781,"genres":[{"name":"Comedy"},{"name":"Supernatural"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1832/153683l.jpg"}}},
+        {"title":"Kaoru Hana wa Rin to Saku","score":8.29,"scored_by":64843,"rank":176,"popularity":345,"members":696510,"favorites":9703,"genres":[{"name":"Drama"},{"name":"Romance"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1068/153664l.jpg"}}},
+        {"title":"One Punch Man 3rd Season","score":8.27,"scored_by":67857,"rank":190,"popularity":153,"members":1504412,"favorites":8610,"genres":[{"name":"Action"},{"name":"Comedy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1220/153774l.jpg"}}},
+        {"title":"Sono Bisque Doll wa Koi wo Suru Season 2","score":8.26,"scored_by":43596,"rank":197,"popularity":417,"members":590381,"favorites":5663,"genres":[{"name":"Romance"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1029/151629l.jpg"}}},
+        {"title":"Blue Lock vs. U-20 Japan","score":8.25,"scored_by":95583,"rank":207,"popularity":395,"members":619986,"favorites":9293,"genres":[{"name":"Sports"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1502/151415l.jpg"}}},
+        {"title":"Spy x Family Season 3","score":8.24,"scored_by":30533,"rank":214,"popularity":168,"members":1399987,"favorites":5171,"genres":[{"name":"Action"},{"name":"Comedy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1771/153773l.jpg"}}},
+        {"title":"Sakamoto Days","score":8.23,"scored_by":82134,"rank":219,"popularity":253,"members":876955,"favorites":6588,"genres":[{"name":"Action"},{"name":"Comedy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1284/150755l.jpg"}}},
+        {"title":"Grand Blue Season 2","score":8.21,"scored_by":26784,"rank":229,"popularity":611,"members":431668,"favorites":3095,"genres":[{"name":"Comedy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1718/153608l.jpg"}}},
+        {"title":"Ame to Kimi to","score":8.20,"scored_by":18954,"rank":239,"popularity":872,"members":294708,"favorites":3280,"genres":[{"name":"Slice of Life"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1230/152755l.jpg"}}},
+        {"title":"Tensei shitara Slime Datta Ken 4th Season","score":8.19,"scored_by":35689,"rank":242,"popularity":321,"members":729256,"favorites":6992,"genres":[{"name":"Adventure"},{"name":"Fantasy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1879/153728l.jpg"}}},
+        {"title":"Hikaru ga Shinda Natsu","score":8.18,"scored_by":53177,"rank":247,"popularity":490,"members":527231,"favorites":10156,"genres":[{"name":"Drama"},{"name":"Horror"},{"name":"Supernatural"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1506/153655l.jpg"}}},
+        {"title":"Daiya no Ace: Act II Second Season","score":8.18,"scored_by":7648,"rank":248,"popularity":3504,"members":43139,"favorites":257,"genres":[{"name":"Sports"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1577/154477l.jpg"}}},
+        {"title":"Ginga Eiyuu Densetsu: Die Neue These - Sakubou","score":8.17,"scored_by":6869,"rank":255,"popularity":3110,"members":50168,"favorites":611,"genres":[{"name":"Drama"},{"name":"Sci-Fi"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1537/154446l.jpg"}}},
+        {"title":"Kimi to Idol Precure♪","score":8.17,"scored_by":3492,"rank":256,"popularity":4204,"members":32293,"favorites":126,"genres":[{"name":"Fantasy"}],"images":{"jpg":{"large_image_url":"https://myanimelist.net/images/anime/1366/150788l.jpg"}}}
+      ]
+    };
+
+    const tooltip = d3.select('#tooltip');
+    const formatComma = d3.format(',');
+
+    function normalizeData(response) {
+      return (response.data || []).map((d, i) => ({
+        title: d.title,
+        score: +d.score || 0,
+        scored_by: +d.scored_by || 0,
+        rank: +d.rank || i + 1,
+        popularity: +d.popularity || 0,
+        members: +d.members || 0,
+        favorites: +d.favorites || 0,
+        type: d.type || 'TV',
+        genres: d.genres || [],
+        image: d.images?.jpg?.large_image_url || d.images?.jpg?.image_url || ''
+      }));
+    }
+
+    function showTooltip(event, d) {
+      const genres = (d.genres || []).map(g => g.name).join(', ') || 'N/A';
+      tooltip
+        .html(`
+          <strong>${d.title}</strong><br>
+          Score: ${d.score.toFixed(2)}<br>
+          Jikan rank value: #${formatComma(d.rank)}<br>
+          Popularity: #${formatComma(d.popularity)}<br>
+          Members: ${formatComma(d.members)}<br>
+          Favorites: ${formatComma(d.favorites)}<br>
+          Scored By: ${formatComma(d.scored_by)}<br>
+          Genres: ${genres}
+        `)
+        .classed('show', true)
+        .style('left', `${event.clientX + 14}px`)
+        .style('top', `${event.clientY + 14}px`);
+    }
+
+    function moveTooltip(event) {
+      tooltip
+        .style('left', `${event.clientX + 14}px`)
+        .style('top', `${event.clientY + 14}px`);
+    }
+
+    function hideTooltip() {
+      tooltip.classed('show', false);
+    }
+
+    function renderRanking(anime) {
+      const ranked = anime.slice(0, 10).map((d, i) => ({ ...d, dashboardPosition: i + 1 }));
+      const featured = ranked[0];
+      const listItems = ranked.slice(1, 10);
+
+      if (!featured) {
+        d3.select('#featured').html('<div class="featured-card"><div><h3 class="featured-title">No TV anime data available</h3><div class="meta-list"><div>The current response did not include any entries matching the TV filter.</div></div></div></div>');
+        d3.select('#anime-list').html('');
+        return;
+      }
+
+      d3.select('#featured').html(`
+        <div class="featured-card">
+          <img class="poster" src="${featured.image}" alt="${featured.title} poster">
+          <div>
+            <div class="featured-rank">Top airing anime</div>
+            <h3 class="featured-title">${featured.title}</h3>
+            <div class="meta-list">
+              <div><strong>Genres:</strong> ${(featured.genres || []).map(g => g.name).join(', ') || 'N/A'}</div>
+              <div><strong>Discovery position:</strong> #1</div>
+              <div><strong>Score:</strong> ${featured.score.toFixed(2)}</div>
+              <div><strong>Members:</strong> ${formatComma(featured.members)}</div>
+              <div><strong>Favorites:</strong> ${formatComma(featured.favorites)}</div>
+            </div>
+          </div>
+        </div>
+      `);
+
+      const rows = d3.select('#anime-list')
+        .selectAll('.anime-row')
+        .data(listItems)
+        .join('div')
+        .attr('class', 'anime-row');
+
+      rows.html(d => `
+        <div class="row-rank">#${d.dashboardPosition}</div>
+        <img class="thumb" src="${d.image}" alt="${d.title} poster">
+        <div>
+          <div class="row-title">${d.title}</div>
+          <div class="row-sub">
+            <span>${(d.genres || []).map(g => g.name).slice(0, 2).join(', ') || 'No genre listed'}</span>
+            <span>${formatComma(d.favorites)} favorites</span>
+          </div>
+        </div>
+        <div class="row-score">Score<strong>${d.score.toFixed(2)}</strong></div>
+      `);
+    }
+
+    function renderScatter(anime) {
+      d3.select('#scatter-wrap').selectAll('*').remove();
+
+      const width = 820;
+      const height = 390;
+      const margin = { top: 18, right: 28, bottom: 50, left: 58 };
+
+      const svg = d3.select('#scatter-wrap')
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(anime, d => d.popularity).reverse())
+        .nice()
+        .range([margin.left, width - margin.right]);
+
+      const y = d3.scaleLinear()
+        .domain([d3.min(anime, d => d.score) - 0.08, d3.max(anime, d => d.score) + 0.08])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+      const r = d3.scaleSqrt()
+        .domain(d3.extent(anime, d => d.members))
+        .range([5, 26]);
+
+      svg.append('g')
+        .attr('class', 'grid')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(7).tickSize(-(height - margin.top - margin.bottom)).tickFormat(''));
+
+      svg.append('g')
+        .attr('class', 'grid')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(6).tickSize(-(width - margin.left - margin.right)).tickFormat(''));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(7).tickFormat(d => `#${formatComma(d)}`));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(6));
+
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 12)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#ffffff')
+        .attr('font-size', 12)
+        .attr('font-weight', 700)
+.text('Popularity (lower rank = more popular)');
+
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 16)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#ffffff')
+        .attr('font-size', 12)
+        .attr('font-weight', 700)
+        .text('Score');
+
+      svg.append('g')
+        .selectAll('circle')
+        .data(anime)
+        .join('circle')
+        .attr('cx', d => x(d.popularity))
+        .attr('cy', d => y(d.score))
+        .attr('r', d => r(d.members))
+        .attr('fill', '#9b7dff')
+        .attr('fill-opacity', 0.82)
+        .attr('stroke', '#efe9ff')
+        .attr('stroke-width', 1)
+        .on('mouseenter', function(event, d) {
+          d3.select(this).attr('fill', '#bea9ff').attr('fill-opacity', 1);
+          showTooltip(event, d);
+        })
+        .on('mousemove', moveTooltip)
+        .on('mouseleave', function() {
+          d3.select(this).attr('fill', '#9b7dff').attr('fill-opacity', 0.82);
+          hideTooltip();
+        });
+    }
+
+    
+    const genreDescriptions = {
+      Action: "Fast-paced stories focused on combat, movement, and high energy scenes.",
+      Adventure: "Characters explore new worlds, locations, or journeys.",
+      Comedy: "Lighthearted content focused on humor and entertainment.",
+      Drama: "Emotion-driven storytelling with character-focused conflicts.",
+      Fantasy: "Stories set in fictional worlds with magic or supernatural elements.",
+      Romance: "Focus on relationships and emotional connections between characters.",
+      "Sci-Fi": "Futuristic themes involving technology, space, or science concepts.",
+      Sports: "Centered around competition, teamwork, and athletic performance.",
+      Supernatural: "Includes elements beyond reality such as spirits or powers.",
+      Mystery: "Focus on solving unknown events, puzzles, or investigations.",
+      "Slice of Life": "Everyday life experiences with a grounded, realistic tone.",
+      Horror: "Designed to create tension, fear, or psychological unease."
+    };
+
+function renderGenres(anime) {
+      d3.select('#genre-wrap').selectAll('*').remove();
+
+      const topN = +d3.select('#genreCount').property('value');
+      const counts = d3.rollups(
+        anime.flatMap(d => (d.genres || []).map(g => g.name)),
+        v => v.length,
+        d => d
+      )
+      .map(([genre, count]) => ({ genre, count }))
+      .sort((a, b) => d3.descending(a.count, b.count))
+      .slice(0, topN);
+
+      const width = 820;
+      const height = 340;
+      const margin = { top: 10, right: 36, bottom: 36, left: 120 };
+
+      const svg = d3.select('#genre-wrap')
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`);
+
+      const x = d3.scaleLinear()
+        .domain([0, d3.max(counts, d => d.count)])
+        .nice()
+        .range([margin.left, width - margin.right]);
+
+      const y = d3.scaleBand()
+        .domain(counts.map(d => d.genre))
+        .range([margin.top, height - margin.bottom])
+        .padding(0.24);
+
+      svg.append('g')
+        .attr('class', 'grid')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(6).tickSize(-(height - margin.top - margin.bottom)).tickFormat(''));
+
+      svg.append('g')
+        .selectAll('rect')
+        .data(counts)
+        .join('rect')
+        .attr('x', x(0))
+        .attr('y', d => y(d.genre))
+        .attr('width', d => x(d.count) - x(0))
+        .attr('height', y.bandwidth())
+        .attr('rx', 8)
+        .attr('fill', '#8d63ff')
+        .on('mouseenter', function(event, d) {
+          d3.select(this).attr('fill', '#a98aff');
+          const description = genreDescriptions[d.genre] || "Common genre found in current top anime.";
+          tooltip
+            .html(`
+              <strong>${d.genre}</strong><br>
+              Appears in ${d.count} of the current top airing anime.<br>
+              <span style="color:#b9b6c9">${description}</span>
+            `)
+            .classed('show', true)
+            .style('left', `${event.clientX + 14}px`)
+            .style('top', `${event.clientY + 14}px`);
+        })
+        .on('mousemove', moveTooltip)
+        .on('mouseleave', function() {
+          d3.select(this).attr('fill', '#8d63ff');
+          hideTooltip();
+        });
+
+      svg.append('g')
+        .selectAll('text.value')
+        .data(counts)
+        .join('text')
+        .attr('x', d => x(d.count) + 7)
+        .attr('y', d => y(d.genre) + y.bandwidth() / 2)
+        .attr('dominant-baseline', 'middle')
+        .attr('fill', '#ffffff')
+        .attr('font-size', 12)
+        .attr('font-weight', 800)
+        .text(d => `${d.count}`);
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(6).tickFormat(d3.format('d')));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
+    }
+
+    async function getAnimeData() {
+      const endpoint = 'https://api.jikan.moe/v4/top/anime?filter=airing';
+      try {
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error('Live fetch failed');
+        const json = await response.json();
+        return normalizeData(json);
+      } catch (error) {
+        console.warn('Using embedded Jikan sample data instead.', error);
+        return normalizeData(embeddedResponse);
+      }
+    }
+
+    async function init() {
+      const anime = await getAnimeData();
+      const tvOnly = anime.filter(d => !(d.type) || d.type.toUpperCase() === 'TV');
+
+      renderRanking(tvOnly);
+      renderScatter(tvOnly);
+      renderGenres(tvOnly);
+
+      d3.select('#genreCount').on('change', () => renderGenres(tvOnly));
+    }
+
+    init();
+  </script>
+</body>
+</html>
